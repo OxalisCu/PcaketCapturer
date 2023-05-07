@@ -204,7 +204,7 @@
        <enum>Qt::NoPen</enum>
       </property>
       <property name="sortingEnabled">
-       <bool>true</bool>
+       <bool>false</bool>
       </property>
       <property name="columnCount">
        <number>7</number>
@@ -263,9 +263,12 @@
     </item>
     <item>
      <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
-        <string>Tab 1</string>
+        <string>Detail</string>
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout">
         <property name="spacing">
@@ -333,7 +336,7 @@
       </widget>
       <widget class="QWidget" name="tab_2">
        <attribute name="title">
-        <string>Tab 2</string>
+        <string>Analysis</string>
        </attribute>
       </widget>
      </widget>

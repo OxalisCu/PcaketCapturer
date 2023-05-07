@@ -55,19 +55,19 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
-    <IncludePath>D:\A-code-apps\WpdPack\Include;D:\A-code-apps\openssl\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\A-code-apps\WpdPack\Lib\x64;D:\A-code-apps\openssl\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\A-code-apps\WpdPack\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\A-code-apps\WpdPack\Lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <IncludePath>D:\A-code-apps\WpdPack\Include;D:\A-code-apps\openssl\OpenSSL-Win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>D:\A-code-apps\WpdPack\Lib\x64;D:\A-code-apps\openssl\OpenSSL-Win64\lib;$(LibraryPath)</LibraryPath>
+    <IncludePath>D:\A-code-apps\WpdPack\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>D:\A-code-apps\WpdPack\Lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;HAVE_REMOTE;WPCAP;_XKEYCHECK_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>wpcap.lib;ws2_32.lib;openssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wpcap.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -75,7 +75,7 @@
       <PreprocessorDefinitions>_WINSOCK_DEPRECATED_NO_WARNINGS;_CRT_SECURE_NO_WARNINGS;WIN32;HAVE_REMOTE;WPCAP;_XKEYCHECK_H;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>wpcap.lib;ws2_32.lib;openssl.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>wpcap.lib;ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" Label="Configuration">
@@ -103,21 +103,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="StreamPool.cpp" />
     <QtRcc Include="QtWidgetsApplication.qrc" />
     <QtUic Include="QtWidgetsApplication.ui" />
     <QtMoc Include="QtWidgetsApplication.h" />
+    <ClCompile Include="DevPool.cpp" />
+    <ClCompile Include="Dumper.cpp" />
+    <ClCompile Include="Filter.cpp" />
     <ClCompile Include="Packet.cpp" />
-    <ClCompile Include="PacketCatcher.cpp" />
+    <ClCompile Include="Catcher.cpp" />
+    <ClCompile Include="PktPool.cpp" />
     <ClCompile Include="QtWidgetsApplication.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DevPool.h" />
+    <QtMoc Include="Dumper.h" />
+    <QtMoc Include="Filter.h" />
     <ClInclude Include="Packet.h" />
-    <ClInclude Include="ProtocolMsg.h" />
+    <ClInclude Include="PktPool.h" />
+    <ClInclude Include="StreamPool.h" />
     <ClInclude Include="Utils.h" />
-    <QtMoc Include="PacketCatcher.h" />
+    <QtMoc Include="Catcher.h" />
     <ClInclude Include="Global.h" />
-    <ClInclude Include="ProtocolHeader.h" />
+    <ClInclude Include="ProtoHeader.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">

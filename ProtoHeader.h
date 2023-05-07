@@ -2,24 +2,32 @@
 #include "Global.h"
 
 #define ETHERNET_HEADER_LENGTH 14
+#define ARP_HEADER_LENGTH 28
 #define IPV4_BASE_HEADER_LENGTH 20
 #define IPV6_BASE_HEADER_LENGTH 40
 #define UDP_HEADER_LENGTH 8
 #define TCP_BASE_HEADER_LENGTH 20
-#define DNS_HEADER_LENGTH 12
+#define ICMP_BASE_HEADER_LENGTH 8
 
 #define ETHERNET_TYPE_IPv4 0x0800
 #define ETHERNET_TYPE_IPv6 0x86DD
 #define ETHERNET_TYPE_ARP 0x0806
 
-#define PROTOCOL_ICMP 1
-#define PROTOCOL_TCP 6
-#define PROTOCOL_UDP 17
+#define IP_PROTOCOL_ICMP 1
+#define IP_PROTOCOL_TCP 6
+#define IP_PROTOCOL_UDP 17
 
 #define PORT_DNS 53
 #define PORT_DHCP_CLIENT 67
 #define PORT_DHCP_SERVER 68
 #define PORT_HTTP 80
+
+#define TLS_CHANGECIPHERSPEC 20
+#define TLS_ALERT 21
+#define TLS_HANDSHAKE 22
+#define TLS_APPLICATIONDATA 23
+#define TLS_HEARTBEAT 24
+
 
 typedef struct Ethernet_Header
 {
@@ -28,6 +36,19 @@ typedef struct Ethernet_Header
 	u_short	type;
 
 } Ethernet_Header;
+
+typedef struct ARP_Header
+{
+	u_short hardware_type;
+	u_short protocol_type;
+	u_char hardware_size;
+	u_char protocol_size;
+	u_short opcode;
+	u_char source_hardware_addr[6];
+	u_char source_ip_addr[4];
+	u_char destination_hardware_addr[6];
+	u_char destination_ip_addr[4];
+}ARP_Header;
 
 typedef struct IPv4_Header
 {
@@ -72,3 +93,10 @@ typedef struct TCP_Header
 	u_short checksum;
 	u_short urgent_pointer;
 }TCP_Header;
+
+typedef struct ICMP_Header
+{
+	u_short type;
+	u_short checksum;
+	u_int other;
+}ICMP_Header;

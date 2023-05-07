@@ -40,10 +40,25 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PacketCatcher.cpp">
+    <ClCompile Include="Catcher.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Packet.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DevPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PktPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Dumper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Filter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="StreamPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -54,18 +69,30 @@
     <ClInclude Include="Packet.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProtocolHeader.h">
+    <ClInclude Include="ProtoHeader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ProtocolMsg.h">
+    <ClInclude Include="PktPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="DevPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="StreamPool.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <QtMoc Include="PacketCatcher.h">
+    <QtMoc Include="Catcher.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Filter.h">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="Dumper.h">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

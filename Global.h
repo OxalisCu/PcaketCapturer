@@ -10,4 +10,6 @@
 #include <QDir>
 #include "pcap.h"
 
+const int READ_PACKET_TIMEOUT = 1000;
+
 #endif // !_GLOBAL_

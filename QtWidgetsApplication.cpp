@@ -9,55 +9,60 @@ QtWidgetsApplication::QtWidgetsApplication(QWidget *parent)
     connect(ui.pushButtonStart, &QPushButton::clicked, this, &QtWidgetsApplication::handleStartCatcher);
     connect(ui.pushButtonEnd, &QPushButton::clicked, this, &QtWidgetsApplication::handleStopCatcher);
     connect(ui.pushButtonImport, &QPushButton::clicked, this, &QtWidgetsApplication::handleImportFile);
-    connect(ui.pushButtonExport, &QPushButton::clicked, this, &QtWidgetsApplication::handleExportFile);
-    connect(ui.lineEdit, &QLineEdit::returnPressed, this, &QtWidgetsApplication::handleSubmitFilter);
     connect(ui.tableWidget, &QTableWidget::itemSelectionChanged, this, &QtWidgetsApplication::handleSelectPacket);
     connect(ui.treeWidget, &QTreeWidget::itemSelectionChanged, this, &QtWidgetsApplication::handleSelectPacketItem);
+    connect(ui.pushButtonExport, &QPushButton::clicked, this, &QtWidgetsApplication::handleExportFile);
+    connect(ui.lineEdit, &QLineEdit::returnPressed, this, &QtWidgetsApplication::handleSubmitFilter);
 
-    catcher = new PacketCatcher;
-    InitComboBox();
-    InitLineEdit();
     InitTableStyle();
     InitTreeStyle();
     InitTable2Style();
 
-    // create the catcher thread
-    catcher->moveToThread(&catcherThread);
-    connect(&catcherThread, &QThread::finished, &catcherThread, &QThread::deleteLater);
-    connect(&catcherThread, &QThread::finished, catcher, &QObject::deleteLater);
-    connect(this, &QtWidgetsApplication::startCatcherThread, catcher, &PacketCatcher::startCapture);
-    connect(this, &QtWidgetsApplication::stopCatcherThread, catcher, &PacketCatcher::stopCapture);
-    connect(this, &QtWidgetsApplication::addCatcherDev, catcher, &PacketCatcher::addLocalDev);
-    connect(this, &QtWidgetsApplication::changeCatcherDev, catcher, &PacketCatcher::setCurDev);
-    connect(this, &QtWidgetsApplication::saveCatcherFile, catcher, &PacketCatcher::saveFile);
-    connect(this, &QtWidgetsApplication::setCatcherFilter, catcher, &PacketCatcher::setFilter);
-    connect(this, &QtWidgetsApplication::startCatcherFilter, catcher, &PacketCatcher::startFilter);
-    connect(catcher, &PacketCatcher::newPacketCaptured, this, &QtWidgetsApplication::handlePacketCaptured);
-    connect(catcher, &PacketCatcher::captureStopped, this, &QtWidgetsApplication::handleCatcherStopped);
-    catcherThread.start();
+    // threads
+    catcher = new Catcher;
+    catcherThread = new QThread;
+    catcher->moveToThread(catcherThread);
+    catcherThread->start();
+    connect(this, &QtWidgetsApplication::startCatcherThread, catcher, &Catcher::startCatch);
+    connect(this, &QtWidgetsApplication::stopCatcherThread, catcher, &Catcher::stopCatch);
+    connect(this, &QtWidgetsApplication::changeCatcherDev, catcher, &Catcher::setCurDev);
+    connect(this, &QtWidgetsApplication::addCatcherDev, catcher, &Catcher::addLocalDev);
+    connect(catcher, &Catcher::newPacketCaptured, this, &QtWidgetsApplication::handlePacketCaptured);
+    connect(catcher, &Catcher::captureStopped, this, &QtWidgetsApplication::handleCatcherStopped);
+
+    dumper = new Dumper;
+    dumperThread = new QThread;
+    dumper->moveToThread(dumperThread);
+    dumperThread->start();
+    connect(this, &QtWidgetsApplication::setDumperPath, dumper, &Dumper::setPath);
+    connect(this, &QtWidgetsApplication::startDumperThread, dumper, &Dumper::startDump);
+
+    filter = new Filter;
+    filterThread = new QThread;
+    filter->moveToThread(filterThread);
+    filterThread->start();
+    connect(this, &QtWidgetsApplication::setFilterDev, filter, &Filter::setDev);
+    connect(this, &QtWidgetsApplication::setFilterStr, filter, &Filter::setFilter);
+    connect(this, &QtWidgetsApplication::startFilterThread, filter, &Filter::startFilter);
+    connect(filter, &Filter::newPacketFiltered, this, &QtWidgetsApplication::handlePacketCaptured);
+    connect(filter, &Filter::filterStopped, this, &QtWidgetsApplication::handleFilterStopped);
+
+    InitComboBox();
 }
 
 QtWidgetsApplication::~QtWidgetsApplication()
 {
     emit stopCatcherThread();
-    catcherThread.quit();
-    catcherThread.wait();
 }
 
 void QtWidgetsApplication::InitComboBox()
 {
     ui.comboBox->clear();
-    ui.comboBox->addItem("select dev");
-    emit changeCatcherDev(0);
-    for (auto dev = catcher->m_devstrlist.begin(); dev != catcher->m_devstrlist.end(); dev++)
+    for (auto dev : catcher->devs->getDevs())
     {
-        ui.comboBox->addItem((*dev)->desc);
+        ui.comboBox->addItem(dev);
     }
-}
-
-void QtWidgetsApplication::InitLineEdit()
-{
-    updateLineStatus(NOEDIT);
+    ui.comboBox->setCurrentIndex(0);
 }
 
 void QtWidgetsApplication::InitContents()
@@ -94,32 +99,24 @@ void QtWidgetsApplication::InitTable2Style()
     ui.tableWidget_2->setPalette(palette);
 }
 
-bool QtWidgetsApplication::isContentEmpty()
-{
-    return catcher->m_pkts.size() == 0;
-}
-
-bool QtWidgetsApplication::isDevSelected()
-{
-    return ui.comboBox->currentIndex() > 0;
-}
-
 void QtWidgetsApplication::updateButtonStatus(ButtonStatus s)
 {
     switch (s)
     {
     case WAITING:
+        ui.lineEdit->setEnabled(true);
         ui.pushButtonStart->setEnabled(
-            isDevSelected()
+            !catcher->devs->isEmpty()
         );
         ui.pushButtonEnd->setEnabled(false);
         ui.pushButtonImport->setEnabled(true);
         ui.pushButtonExport->setEnabled(
-            !isContentEmpty()
+            !catcher->pkts->isEmpty()
         );
         ui.comboBox->setEnabled(true);
         break;
     case CAPTURING:
+        ui.lineEdit->setEnabled(false);
         ui.pushButtonStart->setEnabled(false);
         ui.pushButtonEnd->setEnabled(true);
         ui.pushButtonImport->setEnabled(false);
@@ -129,69 +126,45 @@ void QtWidgetsApplication::updateButtonStatus(ButtonStatus s)
     }
 }
 
-void QtWidgetsApplication::updateLineStatus(LineStatus s)
-{
-    //switch (s)
-    //{
-    //case EDIT:
-    //    ui.lineEdit->setEnabled(true);
-    //    break;
-    //case NOEDIT:
-    //    ui.lineEdit->setEnabled(false);
-    //    break;
-    //}
-}
-
 void QtWidgetsApplication::showPacketMsg(Packet* p)
 {
     ui.treeWidget->clear();
     // frame msg
     QTreeWidgetItem* frame = new QTreeWidgetItem({ "frame" });
-    frame->addChild(new QTreeWidgetItem({ "frame number:  " + QString::number(p->frame_msg.num) }));
-    frame->addChild(new QTreeWidgetItem({ "frame length:  " + QString::number(p->frame_msg.length) + "bytes"}));
-    frame->addChild(new QTreeWidgetItem({ "capture time:  " + p->frame_msg.time.toString("yyyy-MM-dd mm:ss:zzz")}));
-    frame->addChild(new QTreeWidgetItem({ "upper protocol:  " + p->frame_msg.protocol}));
-    if (p->frame_msg.stream_index != -1) frame->addChild(new QTreeWidgetItem({ p->frame_msg.protocol + " stream index:  " + QString::number(p->frame_msg.stream_index)}));
+    frame->addChild(new QTreeWidgetItem({ "frame number:  " + QString::number(p->frame.num) }));
+    frame->addChild(new QTreeWidgetItem({ "frame length:  " + QString::number(p->frame.length) + "bytes"}));
+    frame->addChild(new QTreeWidgetItem({ "capture time:  " + p->frame.time.toString("yyyy-MM-dd mm:ss:zzz")}));
+    frame->addChild(new QTreeWidgetItem({ "upper protocol:  " + p->frame.protocol}));
+    if (p->frame.stream_index != -1) frame->addChild(new QTreeWidgetItem({ p->frame.protocol + " stream index:  " + QString::number(p->frame.stream_index)}));
     ui.treeWidget->addTopLevelItem(frame);
     // protocols
-    int i = 0;
-    for (auto protocol_msg : p->protocols)
+    int offset = 0;
+    for (ProtoMsg* proto : p->protos)
     {
-        QTreeWidgetItem* protocol = new QTreeWidgetItem({ protocol_msg->name });
-        int j = 0;
-        for (auto protocol_item : protocol_msg->items)
-        {
-            QTreeWidgetItem* item = new QTreeWidgetItem({ protocol_item->name + ":  " + protocol_item->desc});
-            if (!protocol_item->children.isEmpty())
-            {
-                int k = 0;
-                for (auto child : protocol_item->children)
-                {
-                    QTreeWidgetItem* c = new QTreeWidgetItem({ child->name + ":  " + child->desc });
-                    item->setData(1, 0, p->protocols[i]->offset * 8 + p->protocols[i]->items[j]->offset + p->protocols[i]->items[j]->children[k]->offset);
-                    item->setData(2, 0, p->protocols[i]->items[j]->children[k]->length);
-                    item->addChild(c);
-                }
-                k++;
-            }
-            // store extra data, bit
-            item->setData(1, 0, p->protocols[i]->offset * 8 + p->protocols[i]->items[j]->offset);
-            item->setData(2, 0, p->protocols[i]->items[j]->length);
-            protocol->addChild(item);
-            j++;
-        }
-        ui.treeWidget->addTopLevelItem(protocol);
-        // store extra data, byte to bit
-        protocol->setData(1, 0, p->protocols[i]->offset * 8);
-        protocol->setData(2, 0, p->protocols[i]->length * 8);
-        i++;
+        ui.treeWidget->addTopLevelItem(setProtoTree(proto, offset));
     }
+}
+
+QTreeWidgetItem* QtWidgetsApplication::setProtoTree(ProtoMsg* proto, int offset)
+{
+    QTreeWidgetItem* protoWidget = new QTreeWidgetItem({ proto->name + ":  " + proto->desc});
+    offset += proto->offset;
+    protoWidget->setData(1, 0, offset);
+    protoWidget->setData(2, 0, proto->length);
+    if (!proto->children.isEmpty())
+    {
+        for (ProtoMsg* p : proto->children)
+        {
+            protoWidget->addChild(setProtoTree(p, offset));
+        }
+    }
+    return protoWidget;
 }
 
 void QtWidgetsApplication::showPacketBytes(Packet* p)
 {
     ui.tableWidget_2->clear();
-    int length = p->frame_msg.length;
+    int length = p->frame.length;
     int col = 16;
     int row = length / col + (length % col == 0 ? 0 : 1);
     ui.tableWidget_2->setRowCount(row);
@@ -207,19 +180,14 @@ void QtWidgetsApplication::showPacketBytes(Packet* p)
 
 void QtWidgetsApplication::handleSelectDev(int index)
 {
-    if (index != 0)
-    {
-        // 0th is "select dev"
-        emit changeCatcherDev(index - 1);
-        updateButtonStatus(WAITING);
-        updateLineStatus(EDIT);
-    }
+    emit changeCatcherDev(index);
+    updateButtonStatus(WAITING);
 }
 
 void QtWidgetsApplication::handleStartCatcher()
 {
+    // create the catcher thread
     updateButtonStatus(CAPTURING);
-    updateLineStatus(NOEDIT);
     InitContents();
     emit startCatcherThread();
 }
@@ -237,23 +205,43 @@ void QtWidgetsApplication::handleImportFile()
     InitComboBox();
 }
 
+void QtWidgetsApplication::handlePacketCaptured(Packet *p)
+{
+    int rownum = ui.tableWidget->rowCount();
+    ui.tableWidget->setRowCount(rownum + 1);
+    ui.tableWidget->setItem(rownum, 0, new QTableWidgetItem(QString::number(p->frame.num)));
+    ui.tableWidget->setItem(rownum, 1, new QTableWidgetItem(p->frame.time.toString("mm:ss:zzz")));
+    ui.tableWidget->setItem(rownum, 2, new QTableWidgetItem(p->frame.src_addr + (p->frame.src_port == 0 ? "" : (" [" + QString::number(p->frame.src_port) + "]"))));
+    ui.tableWidget->setItem(rownum, 3, new QTableWidgetItem(p->frame.des_addr + (p->frame.src_port == 0 ? "" : (" [" + QString::number(p->frame.des_port) + "]"))));
+    ui.tableWidget->setItem(rownum, 4, new QTableWidgetItem(p->frame.protocol));
+    ui.tableWidget->setItem(rownum, 5, new QTableWidgetItem(QString::number(p->frame.length)));
+    ui.tableWidget->setItem(rownum, 6, new QTableWidgetItem(p->frame.info));
+}
+
+void QtWidgetsApplication::handleCatcherStopped()
+{
+    updateButtonStatus(WAITING);
+}
+
 void QtWidgetsApplication::handleExportFile()
 {
     // save file
     QString path = QFileDialog::getSaveFileName(this, "save capture file", "./", "Text files (*.pcap)");
-    emit saveCatcherFile(path);
+    emit setDumperPath(path, catcher->getTmpfile());
+    emit startDumperThread();
 }
 
 void QtWidgetsApplication::handleSubmitFilter()
 {
     QString str = ui.lineEdit->text();
     QPalette palette;
-    if (catcher->validateFilter(str))
+    if (filter->validateFilter(str))
     {
-        emit setCatcherFilter(str);
+        emit setFilterDev(catcher->getTmpfile());
+        emit setFilterStr(str);
         palette.setColor(QPalette::Base, QColor::fromRgb(175, 255, 175));
         InitContents();
-        emit startCatcherFilter();
+        emit startFilterThread();
     }
     else {
         palette.setColor(QPalette::Base, QColor::fromRgb(255, 175, 175));
@@ -261,30 +249,16 @@ void QtWidgetsApplication::handleSubmitFilter()
     ui.lineEdit->setPalette(palette);
 }
 
-void QtWidgetsApplication::handlePacketCaptured(Packet *p)
-{
-    int rownum = ui.tableWidget->rowCount();
-    ui.tableWidget->setRowCount(rownum + 1);
-    ui.tableWidget->setItem(rownum, 0, new QTableWidgetItem(QString::number(p->frame_msg.num)));
-    ui.tableWidget->setItem(rownum, 1, new QTableWidgetItem(p->frame_msg.time.toString("mm:ss:zzz")));
-    ui.tableWidget->setItem(rownum, 2, new QTableWidgetItem(p->frame_msg.src));
-    ui.tableWidget->setItem(rownum, 3, new QTableWidgetItem(p->frame_msg.des));
-    ui.tableWidget->setItem(rownum, 4, new QTableWidgetItem(p->frame_msg.protocol));
-    ui.tableWidget->setItem(rownum, 5, new QTableWidgetItem(QString::number(p->frame_msg.length)));
-    ui.tableWidget->setItem(rownum, 6, new QTableWidgetItem(p->frame_msg.info));
-}
-
-void QtWidgetsApplication::handleCatcherStopped()
+void QtWidgetsApplication::handleFilterStopped()
 {
     updateButtonStatus(WAITING);
-    updateLineStatus(EDIT);
 }
 
 void QtWidgetsApplication::handleSelectPacket()
 {
-    int curPacket = ui.tableWidget->currentRow();
-    showPacketMsg(catcher->m_pkts[curPacket]);
-    showPacketBytes(catcher->m_pkts[curPacket]);
+    int curPkt = ui.tableWidget->currentRow();
+    showPacketMsg(catcher->pkts->getPkt(curPkt));
+    showPacketBytes(catcher->pkts->getPkt(curPkt));
 }
 
 void QtWidgetsApplication::handleSelectPacketItem()
@@ -294,7 +268,7 @@ void QtWidgetsApplication::handleSelectPacketItem()
     u_int offset = selected->data(1, 0).value<u_int>();
     u_int length = selected->data(2, 0).value<u_int>();
     // select packet bytes
-    int index = offset / 8 - (offset % 8 == 0 ? 0 : 1);
+    int index = offset / 8;
     int num = length / 8 + (length % 8 == 0 ? 0 : 1);
     ui.tableWidget_2->clearSelection();
     ui.tableWidget_2->setSelectionMode(QAbstractItemView::MultiSelection);
